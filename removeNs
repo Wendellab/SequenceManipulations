@@ -1,0 +1,46 @@
+#!/bin/bash
+
+display_usage() {
+        echo "Corrinne Grover, September 2014"
+        echo "This script removes sequences from an aligned fasta file that have more than 50% Ns, and then removes remaining alignment positions that have more than 25% Ns."
+        echo "This script requires Python and PyCogent (http://pycogent.org/)"
+        echo -e "\nUsage:\n$0 infile outfile \n"
+        }
+
+
+# if less than two arguments supplied, display usage
+        if [  $# -le 1 ]
+        then
+                display_usage
+                exit 1
+        fi
+
+# user supplied -h or --help; display usage
+        if [[ ( $# == "--help") ||  $# == "-h" ]]
+        then
+                display_usage
+                exit 0
+        fi
+
+
+cat $1 | sed 's/-/Q/g' | sed 's/N/-/g' > temp.fasta
+
+python - << END
+
+import sys
+
+from cogent import LoadSeqs, DNA
+
+aln = LoadSeqs('temp.fasta', moltype=DNA, format='fasta')
+filtered_aln = aln.omitGapSeqs(0.50)
+filtered_gaps = filtered_aln.omitGapPositions(0.25)
+filtered_gaps.toFasta()
+filtered_gaps.writeToFile('temp2.fasta')
+
+#sys.exit()
+
+END
+
+cat temp2.fasta | sed 's/-/N/g' | sed 's/Q/-/g' > $2
+rm temp.fasta
+rm temp2.fasta
